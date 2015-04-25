@@ -1,0 +1,121 @@
+<!doctype HTML>
+<html>
+  <head><title>minimal web midi demo</title>
+  <style media="screen">
+    #sequencer input[type="range"] {
+      -webkit-appearance: slider-vertical;
+      width: 20px;
+    }
+  </style>
+
+  </head>
+  <body>
+    <select id="midi_input_device_select"></select>
+
+    <div id="sequencer">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_1">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_2">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_3">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_4">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_5">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_6">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_7">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_8">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_9">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_10">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_11">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_12">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_13">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_14">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_15">
+      <input type="range" min="0" max="127" orient="vertical" value="0" step="1" id="note_16">
+    </div>
+
+    <a href="#" id="play">PLAY</a>
+
+
+    <script type="text/javascript" src="js/vendor/web_midi_shim.js"></script>
+    <script type="text/javascript" >
+
+
+
+
+      var openPort = null;
+      var allOutputs = null;
+      var playingNotes = []
+
+
+      function midiOutputChanged(id) {
+        if (openPort) {
+          openPort.close();
+          openPort = null;
+        }
+        if (allOutputs && allOutputs.get(id)) {
+          openPort = allOutputs.get(id);
+          openPort.open()
+          console.log(allOutputs.get(id).connection)
+        }
+      }
+
+      var nextTick = window.performance.now();
+      var playing = false;
+
+      function play() {
+        playing = true;
+        playNotes();
+      }
+
+
+
+      function playNotes() {
+        if (!playing) return;
+        if (!openPort) return;
+        if (nextTick - window.performance.now() < 500) {
+          console.log("NP")
+          var stepInterval = 500.0 / 4.0;
+
+          for (var i=0,l=16;i<l;i++) {
+
+            note = document.getElementById('note_' + (i+1)).value;
+            if (note > 0) {
+              var startTime = nextTick + (stepInterval * i);
+              openPort.send([144,note,127], startTime);
+              openPort.send([128,note,127], startTime + stepInterval);
+            }
+
+
+          }
+          nextTick += 16 * stepInterval;
+          console.log("notes scheduled, next tick: " + nextTick);
+        }
+        setTimeout(playNotes , 40);
+      }
+
+
+      navigator.requestMIDIAccess().then(function(info) {
+        var selector = document.getElementById('midi_input_device_select');
+        selector.addEventListener('change', function(e) {
+          midiOutputChanged(e.target.value);
+        });
+        allOutputs = info.outputs;
+
+        info.outputs.forEach(function(input, id) {
+          var opt = document.createElement('option');
+          opt.setAttribute('value', id);
+          opt.innerHTML = input.name;
+          selector.appendChild(opt);
+        });
+        var firstId = info.outputs.keys().next().value;
+
+        midiOutputChanged(firstId);
+
+      });
+
+      var tapper = document.getElementById('play');
+      tapper.addEventListener('click', play);
+
+
+
+    </script>
+  </body>
+</html>

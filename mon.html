@@ -1,0 +1,54 @@
+<html>
+  <head><title>minimal web midi demo</title></head>
+  <body>
+    <select id="midi_input_device_select"></select>
+
+
+    <script type="text/javascript" src="js/vendor/web_midi_shim.js"></script>
+    <script type="text/javascript" >
+
+      var openPort = null;
+      var allInputs = null;
+
+      function onMidiMessage(message) {
+        var data = message.data;
+        var cmd = data[0] >> 4;
+        var channel = data[0] & 0b1111;
+        console.log(cmd, channel, data[1], data[2]);
+      }
+
+      function midiInputChanged(id) {
+        if (openPort) openPort.removeEventListener('midimessage');
+        console.log(id, allInputs.get(id))
+        if (allInputs && allInputs.get(id)) {
+          openPort = allInputs.get(id);
+          console.log("attaching message handler");
+          openPort.addEventListener('midimessage', onMidiMessage)
+          openPort.open();
+          console.log(openPort.connection)
+        }
+      }
+
+      navigator.requestMIDIAccess().then(function(info) {
+        var selector = document.getElementById('midi_input_device_select');
+        selector.addEventListener('change', function(e) {
+          midiInputChanged(e.target.value);
+        });
+        allInputs = info.inputs;
+
+        info.inputs.forEach(function(input, id) {
+          var opt = document.createElement('option');
+          opt.setAttribute('value', id);
+          opt.innerHTML = input.name;
+          selector.appendChild(opt);
+        });
+        var firstId = info.inputs.keys().next().value;
+
+        midiInputChanged(firstId);
+
+      }, function(error) {
+        console.log("MIDI init went wrong", error);
+      });
+    </script>
+  </body>
+</html>

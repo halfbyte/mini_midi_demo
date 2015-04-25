@@ -1,0 +1,103 @@
+<html>
+  <head><title>minimal web midi demo</title></head>
+  <body>
+    <select id="midi_input_device_select"></select>
+
+
+    <script type="text/javascript" src="js/vendor/web_midi_shim.js"></script>
+    <script type="text/javascript" >
+
+
+      var c = new AudioContext();
+      var master = c.createGain();
+      master.gain.value = 0.5;
+      master.connect(c.destination);
+
+
+      var openPort = null;
+      var allInputs = null;
+      var playingNotes = []
+
+      function note2f(note) {
+
+        return Math.pow(2, ((note - 69) / 12)) * 440
+      }
+
+      function playNote(note) {
+        var osc = c.createOscillator();
+        var amp = c.createGain();
+        osc.frequency.value = note2f(note);
+        osc.type = 'sawtooth';
+        osc.connect(amp);
+        amp.connect(master);
+        amp.gain.setValueAtTime(0, c.currentTime);
+        amp.gain.linearRampToValueAtTime(1, c.currentTime + 0.01);
+        osc.start();
+        return {
+          stop: function() {
+            amp.gain.setValueAtTime(1, c.currentTime);
+            amp.gain.linearRampToValueAtTime(0, c.currentTime + 0.5);
+            osc.stop(c.currentTime + 0.5);
+          }
+        }
+      }
+
+
+      function noteOn(note) {
+        if (playingNotes[note]) return;
+
+
+        playingNotes[note] = playNote(note);
+      }
+      function noteOff(note) {
+        if (!playingNotes[note]) return;
+        playingNotes[note].stop();
+
+        playingNotes[note] = null;
+      }
+
+
+      function onMidiMessage(message) {
+        var data = message.data;
+        var cmd = data[0] & 0b11110000;
+        if (cmd === 144 && data[2] > 0) {
+          noteOn(data[1]);
+        }
+        if (cmd === 128 || (cmd == 144 && data[2] === 0)) {
+          noteOff(data[1]);
+        }
+        console.log(cmd);
+      }
+
+      function midiInputChanged(id) {
+        if (openPort) openPort.removeEventListener('midimessage');
+        console.log(id, allInputs.get(id))
+        if (allInputs && allInputs.get(id)) {
+          console.log("attaching message handler");
+          allInputs.get(id).addEventListener('midimessage', onMidiMessage)
+          allInputs.get(id).open();
+          console.log(allInputs.get(id).connection)
+        }
+      }
+
+      navigator.requestMIDIAccess().then(function(info) {
+        var selector = document.getElementById('midi_input_device_select');
+        selector.addEventListener('change', function(e) {
+          midiInputChanged(e.target.value);
+        });
+        allInputs = info.inputs;
+
+        info.inputs.forEach(function(input, id) {
+          var opt = document.createElement('option');
+          opt.setAttribute('value', id);
+          opt.innerHTML = input.name;
+          selector.appendChild(opt);
+        });
+        var firstId = info.inputs.keys().next().value;
+
+        midiInputChanged(firstId);
+
+      });
+    </script>
+  </body>
+</html>
