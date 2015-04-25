@@ -30,4 +30,4 @@ A simple sequencer that drives any connected synthesizer.
 
 ### [canvas.html](canvas.html)
 
-An example of driving some simple canvas drawing by MIDI commands.
+An example of driving some simple canvas drawing by MIDI commands. You probably need to adapt the MIDI controller numbers.
