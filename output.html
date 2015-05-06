@@ -6,6 +6,9 @@
       -webkit-appearance: slider-vertical;
       width: 20px;
     }
+    .active {
+      background: red;
+    }
   </style>
 
   </head>
@@ -42,7 +45,8 @@
 
       var openPort = null;
       var allOutputs = null;
-      var playingNotes = []
+      var playingNotes = [];
+      var TEMPO = 125;
 
 
       function midiOutputChanged(id) {
@@ -72,10 +76,11 @@
         if (!openPort) return;
         if (nextTick - window.performance.now() < 500) {
           console.log("NP")
-          var stepInterval = 500.0 / 4.0;
+          var stepInterval = 15000 / TEMPO;
+
+
 
           for (var i=0,l=16;i<l;i++) {
-
             note = document.getElementById('note_' + (i+1)).value;
             if (note > 0) {
               var startTime = nextTick + (stepInterval * i);
